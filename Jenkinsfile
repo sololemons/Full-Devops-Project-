@@ -42,7 +42,7 @@ pipeline {
             steps {
                 script {
                     echo "Waiting for the Load Balancer to stabilize..."
-                    sleep time: 10, unit: 'SECONDS'
+                    sleep time: 120, unit: 'SECONDS'
                     
                     def stagingUrl = sh(
                         script: "kubectl get svc kk-payments-service -n kijani-staging -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'",
