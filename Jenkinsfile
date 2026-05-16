@@ -24,12 +24,10 @@ pipeline {
                 sh "aws eks update-kubeconfig --region ${AWS_DEFAULT_REGION} --name ${CLUSTER_NAME}"
             }
         }
-        
+
 
         stage('Deploy to Staging') {
-            when {
-                branch 'main'
-            }
+         
             steps {
                 sh """
                 export DOCKER_HUB_PASSWORD=\$DOCKER_HUB_USER_PSW
