@@ -27,9 +27,10 @@ spec:
       - name: kijani-registry-credentials
       containers:
       - name: kk-payments
+      
         ##image: solomondocker10277/kk-payments:1.1.0
         image: solomondocker10277/kk-payments-cloud:1.1.1  
-        
+
         readinessProbe:
           httpGet:
             path: /api/health
