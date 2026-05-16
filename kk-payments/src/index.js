@@ -14,6 +14,10 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'your-real-receipt-bucket-name';
 
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'healthy', message: 'Kubernetes probes passing!' });
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
