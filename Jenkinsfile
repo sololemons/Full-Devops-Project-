@@ -24,6 +24,7 @@ pipeline {
                 sh "aws eks update-kubeconfig --region ${AWS_DEFAULT_REGION} --name ${CLUSTER_NAME}"
             }
         }
+        
 
         stage('Deploy to Staging') {
             when {
