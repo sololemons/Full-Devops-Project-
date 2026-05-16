@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KijaniKiosk Payments</title>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { text-align: center; padding: 2rem; border-radius: 12px; background-color: #1e293b; border: 1px solid #334155; width: 350px; }
+        h1 { color: #00dc82; margin-bottom: 5px;}
+        .success-msg { color: #00dc82; font-size: 1.2rem; font-weight: bold; margin: 20px 0; display: none; }
+        .subtext { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; }
+        button { background: #00dc82; border: none; padding: 12px 20px; border-radius: 8px; color: #06201f; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s; }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>KijaniKiosk</h1>
+        <p class="subtext">Amount Due: $10.00</p>
+        
+        <button id="payBtn">Pay Now</button>
+        
+        <div id="successMessage" class="success-msg">
+            ✔ Payment Successful!
+            <p style="font-size: 0.8rem; font-weight: normal; margin-top: 10px; color: #cbd5e1;">Receipt is being generated...</p>
+        </div>
+    </div>
+
+    <script>
+        const payBtn = document.getElementById('payBtn');
+        const successMessage = document.getElementById('successMessage');
+
+        payBtn.addEventListener('click', async () => {
+            payBtn.disabled = true;
+            payBtn.textContent = 'Processing...';
+
+            try {
+                const resp = await fetch('/api/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: 10 })
+                });
+
+                if (resp.ok) {
+                    // Hide button, show success
+                    payBtn.style.display = 'none';
+                    successMessage.style.display = 'block';
+                } else {
+                    throw new Error('Server rejected payment');
+                }
+            } catch (err) {
+                console.error(err);
+                payBtn.disabled = false;
+                payBtn.textContent = 'Pay Now';
+                alert('Payment failed to reach server. Check console logs.');
+            }
+        });
+    </script>
+</body>
+</html>

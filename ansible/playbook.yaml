@@ -1,0 +1,46 @@
+---
+- name: Deploy kk-payments to EKS cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    env: "staging"
+    docker_user: "{{ lookup('env', 'DOCKER_HUB_USER') }}"
+    docker_password: "{{ lookup('env', 'DOCKER_HUB_PASSWORD') }}"
+    docker_email: "{{ lookup('env', 'DOCKER_HUB_EMAIL') }}"
+
+  tasks:
+    - name: 1. Ensure the target environment namespace exists
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "kijani-{{ env }}"
+        state: present
+
+    - name: 2. Automatically generate Docker Hub Registry Credentials
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: kijani-registry-credentials
+            namespace: "kijani-{{ env }}"
+          type: kubernetes.io/dockerconfigjson
+          stringData:
+            .dockerconfigjson: "{{ { 'auths': { 'https://index.docker.io/v1/': { 'username': docker_user, 'password': docker_password, 'email': docker_email, 'auth': (docker_user + ':' + docker_password) | b64encode } } } | to_json }}"
+
+    - name: 3. Apply Native Environment-Specific ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        namespace: "kijani-{{ env }}"
+        src: "../k8s/manifests/{{ env }}/kk-payments-configmap.yaml" 
+    - name: 4. Apply Shared Application Layout
+      kubernetes.core.k8s:
+        state: present
+        namespace: "kijani-{{ env }}"
+        src: "{{ item }}"
+      loop:
+        - "../k8s/manifests/kk-payments-deployment.yaml" 
+        - "../k8s/manifests/kk-payments-service.yaml"
