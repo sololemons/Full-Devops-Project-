@@ -1,35 +1,27 @@
-# Start with the official Jenkins image
 FROM jenkins/jenkins:lts
 
-# Switch to root to install packages
 USER root
 
-# Install prerequisites and Ansible
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     ansible \
     python3-kubernetes
 
-# Install AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws
 
-# Install kubectl
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     chmod +x kubectl && \
     mv kubectl /usr/local/bin/
 
-# 🚀 NEW: Install Helm
 RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && \
     chmod 700 get_helm.sh && \
     ./get_helm.sh && \
     rm get_helm.sh
 
-# Switch back to the standard jenkins user
 USER jenkins
 
-# Install Ansible Kubernetes collection
 RUN ansible-galaxy collection install kubernetes.core

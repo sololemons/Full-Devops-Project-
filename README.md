@@ -1,106 +1,141 @@
-# KijaniKiosk Payments Capstone
 
-## Overview
-This repository automates infrastructure provisioning and deployment for the KijaniKiosk Payments mock API. It uses Terraform to create AWS infrastructure, Ansible to deploy Kubernetes manifests to EKS, and Jenkins to orchestrate CI/CD for staging and production. The end result is a working Kubernetes deployment with environment-specific configuration and a gated release flow.
+---
 
-## What This Repo Achieves
-- Provisions a VPC, EKS cluster, and S3 bucket for receipt storage.
-- Creates an IAM role and Kubernetes service account for secure access to S3.
-- Deploys the payments API to Kubernetes with per-environment ConfigMaps.
-- Automates staging deployment, smoke testing, and a manual production approval gate.
+**What the project is**
 
-## High-Level Flow
-1. Terraform builds AWS infrastructure (VPC, EKS, S3, IAM).
-2. Jenkins connects to EKS and runs Ansible.
-3. Ansible applies Kubernetes manifests and environment configuration.
-4. Jenkins runs a staging smoke test and gates production.
+KijaniKiosk Payments is a mock payments API deployed to AWS using a three-tool stack: Terraform provisions the cloud infrastructure, Ansible handles the Kubernetes deployment, and Jenkins ties it all together with a CI/CD pipeline that includes a gated production release.
 
-## Terraform (Infrastructure)
-Located in `terraform/`:
-- **Networking**: Creates a VPC with public subnets and routes. NAT is disabled, so nodes and services are public by default.
-- **EKS**: Provisions an EKS cluster and a managed node group for staging workloads.
-- **S3**: Creates a receipts bucket with an environment-specific name.
-- **IAM/IRSA**: Creates an IAM policy for S3 access and an IAM role for service accounts (IRSA) to allow the app to access the bucket securely.
-- **Kubernetes bootstrap**: Creates a namespace and a service account in the cluster.
+---
 
-Key outputs include the cluster name, cluster endpoint, S3 bucket name, and IAM role ARN.
+**Layer 1 — Terraform builds the foundation**
 
-## Ansible (Deployment)
-Located in `ansible/playbook.yaml`:
-- **Namespace**: Ensures `kijani-<env>` exists.
-- **Registry secret**: Builds a Docker Hub pull secret from Jenkins-provided environment variables.
-- **ConfigMap**: Renders `k8s/manifests/kk-payments-configmap.yaml.j2` with the target environment and fetched S3 bucket name.
-- **Workload + service**: Applies the Deployment and Service manifests that expose the application via a LoadBalancer.
+Before any code runs, Terraform creates everything the app needs to live in AWS:
 
-Ansible expects `env` to be `staging` or `production` and depends on AWS CLI access to look up the receipts bucket.
+- A **VPC** with public subnets so the cluster nodes can reach the internet 
+- An **EKS cluster** with a managed node group to run Kubernetes workloads
+- **EC2 Instances** which will work as worker nodes for the cluster so in my case i have spun 3 (t3.micro) which will be useful in running the pods
+- An **S3 bucket** named per environment for receipt storage
+- An **IAM role with IRSA** (IAM Roles for Service Accounts) — Instead of embedding AWS credentials in the app, the Kubernetes service account gets an IAM role attached which is attached to the pods through the deployment manifest. The pod can now read/write S3 without any hardcoded secrets.
 
-## Jenkins Pipeline
-Defined in `Jenkinsfile`:
-- **Checkout**: Pulls source from SCM.
-- **Cluster access**: Runs `aws eks update-kubeconfig` to connect to the EKS cluster.
-- **Deploy to staging**: Runs Ansible with `env=staging`.
-- **Smoke test**: Resolves the service LoadBalancer hostname and checks `/api/health` with retries.
-- **Approval gate**: Requires manual approval before production.
-- **Deploy to production**: Runs Ansible with `env=production`.
+Terraform outputs the cluster name, endpoint, bucket name, and IAM role ARN.These outputs get picked up by other files.
 
-## Application Artifacts
-- **Source**: `kk-payments/src` is the mock API.
-- **Build output**: The build script copies JS and HTML into `dist/`.
-- **Docker**: The Dockerfile builds a production image, installs runtime dependencies only, and exposes port 8067.
+## Show VPC In Aws
 
-## Getting Started
-### Prerequisites
-- AWS CLI configured with credentials that can create VPC, EKS, S3, IAM.
-- Terraform >= 1.5
-- kubectl
-- Ansible with the Kubernetes collection:
-  - `ansible-galaxy collection install kubernetes.core`
-- Docker Hub account for image hosting
+![vpc](/screenshots/VPC.png)
 
-### Build and Push the App Image
-The deployment manifest references a Docker image. Build and push the image tag you want to run:
+## Show IAM role in Aws(kijanikiosk-payments-role)
+
+![IAM-role](/screenshots/ROLES.png)
+
+## Show Policies attached to the Role
+ 
+![Policies](/screenshots/POLICIES.png)
+
+## Show THe S3 bucket used to store receipts
+
+![S3-buckets](/screenshots/S3BUCKETS.png)
+
+
+
+
+---
+
+**Layer 2 — Jenkins orchestrates the whole pipeline**
+
+The `Jenkinsfile` defines five sequential stages:
+
+1. **Checkout** — pulls the source from SCM
+2. **Cluster access** — runs `aws eks update-kubeconfig` to connect `kubectl` to the EKS cluster
+3. **Deploy to staging** — runs the Ansible playbook with `env=staging`
+4. **Smoke test** — resolves the LoadBalancer hostname and hits `/api/health` with retries until it responds to make sure the pod is not only running but it is also healthy
+5. **Approval gate** — pauses and waits for a human to approve before going further
+6. **Deploy to production** — runs Ansible again with `env=production` if approved in the previous stage.
+
+To see the jenkins logs during a full pipeline run with  approval to production check the .txt below 
+- Link: [full-jenkins-output.txt](full-jenkins-output.txt)
+
+---
+
+**Layer 3 — Ansible handles Kubernetes deployment**
+
+Ansible's playbook does four things for each environment:
+
+- Creates the `kijani-<env>` namespace if it doesn't exist
+- Builds a Docker Hub image pull secret from Jenkins-injected credentials
+- Renders a **Jinja2 ConfigMap template** that injects `TARGET_ENV` and `S3_BUCKET_NAME` into the app's config
+- Applies the Deployment and Service manifests 
+
+---
+
+**Layer 4 — What runs in Kubernetes**
+
+The final running state in the `kijani-<env>` namespace includes a ConfigMap with environment-specific values, a Docker pull secret, a Deployment running the payments API image on port 8067, and a LoadBalancer Service pointing at it. The pod uses the IRSA-linked service account which is called **kk-payments-sa** to access S3 bucket without credentials to upload the receipt.
+
+## Show Resources in both environments 
+
+![show-resources](/screenshots/SHOWBOTHPRODUCTIONANDSTAGING%20]RESOURCES.png)
+
+-Above You can see Pods,deployment,service,replicaaset for both environments this is assuming in my jenkins i approved the pipeline to productions hence the **kijani-production** namespace.
+
+## Show The Eks Cluster in AWS evidence 
+
+![eks-cluster](/screenshots/KIJANIEKSCLUSTER.png)
+
+## Show The EC2 instances ie the worker-nodes
+
+![ec2-worker-nodes](/screenshots/EC2WORKERNODES.png)
+
+
+
+
+
+---
+
+**Layer 5 — Monitoring and health checks**
+
+Prometheus is intentionally not installed to keep the cluster lightweight for free-tier usage. Instead, there is a manual monitoring script you can run on demand:
+
+- **Manual SLO checker**: The script in [k8s/manifests/check_slo_errors.sh](k8s/manifests/check_slo_errors.sh) pulls recent logs from the target namespace and calculates an error rate over the last 2 minutes. If the rate is above 5%, it flags an alert.
+- **Jenkins smoke test**: The pipeline resolves the LoadBalancer hostname and runs a `curl` against `/api/health` with retries. This is a synthetic, post-deploy check that verifies the service is reachable and responding before moving on to production.
+- **Kubernetes probes**: The Deployment defines readiness and liveness probes on `/api/health`. If the app stops responding, Kubernetes will remove it from service or restart it.
+- **Docker health check**: The Docker image has a `HEALTHCHECK` that hits the same endpoint inside the container. This is an extra runtime signal if you run the container outside Kubernetes.
+
+Run the script manually like this:
 ```bash
-npm install
-npm run build
-
-docker build -t <dockerhub-user>/kk-payments-cloud:<tag> .
-docker push <dockerhub-user>/kk-payments-cloud:<tag>
-```
-Update the image tag in `k8s/manifests/kk-payments-deployment.yaml`.
-
-### Provision Infrastructure
-```bash
-cd terraform
-terraform init
-terraform apply
+cd k8s/manifests
+./check_slo_errors.sh staging
 ```
 
-### Deploy to Staging Manually
-```bash
-aws eks update-kubeconfig --region eu-west-1 --name kijani-staging-cluster
-export DOCKER_HUB_USER=<your-user>
-export DOCKER_HUB_PASSWORD=<your-password>
-export DOCKER_HUB_EMAIL=<your-email>
 
-cd ansible
-ansible-playbook playbook.yaml -e env=staging
-```
+---
 
-### Deploy to Production Manually
-```bash
-cd ansible
-ansible-playbook playbook.yaml -e env=production
-```
+**Layer 6 — Serverless S3 integration**
 
-## Production Gaps (4 points)
-1. **Network isolation**: EKS nodes and services live in public subnets without NAT. Production should use private subnets, NAT gateways, and restricted security groups.
-2. **Autoscaling and resilience**: Node and pod autoscaling are not enabled. Production should add Cluster Autoscaler, HPA, and multi-AZ node groups.
-3. **Ingress and TLS**: The service is a public LoadBalancer without TLS termination. Production should use an Ingress controller with TLS certificates and hostname routing.
-4. **Secrets management**: Docker Hub credentials are injected via Jenkins and stored in a Kubernetes secret. Production should use a secrets manager (AWS Secrets Manager or SSM) and short-lived credentials.
+The payments API writes receipt objects to Amazon S3.Access is granted through IRSA, so the pod uses the Kubernetes service account IAM role to write receipts without hardcoded AWS keys.
 
-## Repo Structure
-- `terraform/` - AWS infrastructure provisioning
-- `ansible/` - Deployment automation to EKS
-- `k8s/` - Kubernetes manifests and config templates
-- `kk-payments/` - Application source code
-- `Jenkinsfile` - CI/CD pipeline
+
+
+Below is evidence of a successful receipt write to the S3 bucket:
+
+After we click **pay** in my Mock api a receipt is uploaded to our bucket and below we can see it 
+![successful-receipt](/screenshots/SUCESSFULLRECEIPT.png)
+
+Evidence of the receipt in the S3 bucket in aws 
+
+![successful-receipt](/screenshots/RECEIPT.png)
+
+
+
+---
+
+**The four production gaps**
+
+The README is honest that this is a learning/capstone setup, not production-ready. The four gaps are worth understanding:
+
+| Gap | Why it matters |
+|---|---|
+| Public subnets, no NAT | EKS nodes are directly internet-exposed. Production needs private subnets + NAT gateways + tight security groups |
+| No autoscaling | Neither pods (HPA) nor nodes (Cluster Autoscaler) scale up under load. One traffic spike can take the service down |
+| LoadBalancer with no TLS | All traffic is unencrypted HTTP. Production needs an Ingress controller, ACM certificate, and HTTPS routing |
+| Docker Hub credentials in Kubernetes secrets | Better practice is AWS Secrets Manager or SSM Parameter Store with short-lived credentials, not long-lived passwords in a K8s secret |
+
