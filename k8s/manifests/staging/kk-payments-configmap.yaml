@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kk-payments-config
-  namespace: kijani-staging
-data:
-  DB_HOST: "staging-db.kijani.internal"
-  ENVIRONMENT: "staging"
-  RECEIPT_BUCKET: "kk-payments-receipts-staging"

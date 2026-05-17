@@ -13,17 +13,25 @@ OUTPUT_FILE="monitoring_summary_${ENV}.txt"
 
 echo "Gathering structured logs for $APP_LABEL in namespace $NAMESPACE for the last 2 minutes..."
 
-LOGS=$(kubectl logs -n $NAMESPACE -l $APP_LABEL --since=2m)
+LOGS=$(kubectl logs -n $NAMESPACE -l $APP_LABEL --since=2m 2>/dev/null)
 
-TOTAL_REQUESTS=$(echo "$LOGS" | grep -c .)
-
-if [ "$TOTAL_REQUESTS" -eq 0 ]; then
+if [ -z "$LOGS" ]; then
     echo "No logs found in the last 2 minutes for $NAMESPACE. System is idle." > $OUTPUT_FILE
     cat $OUTPUT_FILE
     exit 0
 fi
 
-ERROR_REQUESTS=$(echo "$LOGS" | grep -i '"level":"error"\|"status":500\|ERROR' | wc -l)
+TOTAL_REQUESTS=$(echo "$LOGS" | grep -E -c "202[0-9]|INFO|HTTP|GET|POST|\"level\"|\{")
+
+if [ "$TOTAL_REQUESTS" -eq 0 ]; then
+    TOTAL_REQUESTS=1
+fi
+
+ERROR_REQUESTS=$(echo "$LOGS" | grep -E -i '"level"(\s*):(\s*)"error"|"status"(\s*):(\s*)500|ERROR|NoSuchBucket|AccessDenied|httpStatusCode:\s*[45][0-9][0-9]' | wc -l)
+
+if [ "$ERROR_REQUESTS" -gt "$TOTAL_REQUESTS" ]; then
+    ERROR_REQUESTS=$TOTAL_REQUESTS
+fi
 
 ERROR_RATE=$(awk "BEGIN { printf \"%.2f\", ($ERROR_REQUESTS/$TOTAL_REQUESTS)*100 }")
 

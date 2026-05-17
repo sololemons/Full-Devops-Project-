@@ -1,4 +1,4 @@
-
+**TRACK A CAPSTONE**
 ---
 
 **What the project is**
@@ -128,14 +128,23 @@ Evidence of the receipt in the S3 bucket in aws
 
 ---
 
-**The four production gaps**
+**Layer 7 — SLO script validation**
 
-The README is honest that this is a learning/capstone setup, not production-ready. The four gaps are worth understanding:
+To validate the monitoring logic, an error was intentionally simulated in the app logs. The SLO script detected the spike and produced a report showing the error rate and status. The output is saved in:
+
+- [monitoring_summary_staging.txt](monitoring_summary_staging.txt)
+
+We opted for this option but in production we would definitely go with prometheus alerts.THe disadavantage of prometheus is its heavyweight for a free tier AWS account.
+
+---
+
+**Production Gaps**
+
 
 | Gap | Why it matters |
 |---|---|
-| Public subnets, no NAT | EKS nodes are directly internet-exposed. Production needs private subnets + NAT gateways + tight security groups |
+| Public subnets, no NAT | EKS nodes are directly internet-exposed. Production needs private subnets + NAT gateways + tight security groups.I opted not to use for NAT gateways due to its high cost which was incomaptible wit the free tier |
 | No autoscaling | Neither pods (HPA) nor nodes (Cluster Autoscaler) scale up under load. One traffic spike can take the service down |
 | LoadBalancer with no TLS | All traffic is unencrypted HTTP. Production needs an Ingress controller, ACM certificate, and HTTPS routing |
-| Docker Hub credentials in Kubernetes secrets | Better practice is AWS Secrets Manager or SSM Parameter Store with short-lived credentials, not long-lived passwords in a K8s secret |
+
 

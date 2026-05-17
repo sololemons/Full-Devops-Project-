@@ -1,0 +1,8 @@
+--- kk-payments SLO Monitoring Report (kijani-staging) ---
+Timestamp: Sun May 17 07:27:58 PM EAT 2026
+Evaluation Window: Last 2 minutes
+Total Requests/Events: 1
+Error Count: 1
+Current Error Rate: 100.00%
+------------------------------------------------------
+STATUS: ALERT  - Error rate exceeds 5% SLO threshold!

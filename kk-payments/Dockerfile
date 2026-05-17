@@ -13,7 +13,6 @@ FROM node:18-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Create your custom non-root user
 RUN addgroup -S kijani && adduser -S kijani -G kijani
 
 COPY --chown=kijani:kijani --from=builder /app/node_modules ./node_modules
