@@ -97,6 +97,8 @@ provider "kubernetes" {
   }
 }
 
+
+
 resource "kubernetes_namespace" "app" {
   depends_on = [module.eks]
   metadata {
@@ -113,3 +115,4 @@ resource "kubernetes_service_account" "payments_sa" {
     }
   }
 }
+

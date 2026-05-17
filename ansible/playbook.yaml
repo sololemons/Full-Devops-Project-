@@ -33,36 +33,15 @@
           stringData:
             .dockerconfigjson: "{{ { 'auths': { 'https://index.docker.io/v1/': { 'username': docker_user, 'password': docker_password, 'email': docker_email, 'auth': (docker_user + ':' + docker_password) | b64encode } } } | to_json }}"
 
-    - name: 3. Add Prometheus Helm repository
-      kubernetes.core.helm_repository:
-        name: prometheus-community
-        repo_url: "https://prometheus-community.github.io/helm-charts"
+    
 
-    - name: 4. Install Prometheus 
-      kubernetes.core.helm:
-        name: prometheus
-        chart_ref: prometheus-community/kube-prometheus-stack
-        release_namespace: monitoring
-        create_namespace: true
-        wait: true
-        timeout: "10m0s"
-        values:
-          grafana:
-            enabled: false
-          alertmanager:
-            enabled: false
-          nodeExporter:
-            enabled: false
-          defaultRules:
-            create: false
-
-    - name: 5. Apply Native Environment-Specific ConfigMap
+    - name: 3. Apply Native Environment-Specific ConfigMap
       kubernetes.core.k8s:
         state: present
         namespace: "kijani-{{ env }}"
         template: "../k8s/manifests/kk-payments-configmap.yaml.j2"
 
-    - name: 6. Apply Shared Application Layout
+    - name: 4. Apply Shared Application Layout
       kubernetes.core.k8s:
         state: present
         namespace: "kijani-{{ env }}"
@@ -70,4 +49,3 @@
       loop:
         - "../k8s/manifests/kk-payments-deployment.yaml" 
         - "../k8s/manifests/kk-payments-service.yaml"
-        - "../k8s/manifests/kk-payments-alerts.yaml" 
