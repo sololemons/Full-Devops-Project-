@@ -52,7 +52,7 @@ The `Jenkinsfile` defines five sequential stages:
 6. **Deploy to production** — runs Ansible again with `env=production` if approved in the previous stage.
 
 To see the jenkins logs during a full pipeline run with  approval to production check the .txt below 
-- Link: [full-jenkins-output.txt](full-jenkins-output.txt)
+- Link: [full-jenkins-output.txt](/docs/full-jenkins-output.txt)
 
 ---
 
