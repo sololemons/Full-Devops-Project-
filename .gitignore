@@ -1,14 +1,11 @@
-# OS files
 .DS_Store
 Thumbs.db
 
-# Editor settings
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Node.js dependencies and build output
 node_modules/
 dist/
 coverage/
@@ -16,12 +13,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment files
 .env
 .env.*
 !.env.example
 
-# Terraform local state and caches
 .terraform/
 *.tfstate
 *.tfstate.*
@@ -31,6 +26,5 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Build artifacts and temporary files
 *.log
 *.tmp
