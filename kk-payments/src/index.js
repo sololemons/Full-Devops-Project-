@@ -9,10 +9,15 @@ const port = 8067;
 app.use(express.json());
 
 const s3Client = new S3Client({ 
-    region: process.env.AWS_REGION || 'us-east-1' 
+    region: process.env.AWS_REGION || 'us-west-1' 
 });
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME;
+
+if (!BUCKET_NAME) {
+    console.error("FATAL ERROR: S3_BUCKET_NAME environment variable is missing!");
+    process.exit(1); 
+}
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'healthy', message: 'Kubernetes probes passing' });

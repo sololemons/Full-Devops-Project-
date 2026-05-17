@@ -1,0 +1,168 @@
+Started by user Solomon Ndimu Ngandu
+Obtained Jenkinsfile from git https://github.com/sololemons/Full-Devops-Project-
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /var/jenkins_home/workspace/capstone-pripeline
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/capstone-pripeline/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/sololemons/Full-Devops-Project- # timeout=10
+Fetching upstream changes from https://github.com/sololemons/Full-Devops-Project-
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+ > git fetch --tags --force --progress -- https://github.com/sololemons/Full-Devops-Project- +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 6de1d2941a893535f517febfd19be0bdbd9aa47a (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 6de1d2941a893535f517febfd19be0bdbd9aa47a # timeout=10
+Commit message: "Trigger Pipeline"
+ > git rev-list --no-walk 6de1d2941a893535f517febfd19be0bdbd9aa47a # timeout=10
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] withCredentials
+Masking supported pattern matches of $DOCKER_HUB_USER or $DOCKER_HUB_USER_PSW or $AWS_ACCESS_KEY_ID or $AWS_SECRET_ACCESS_KEY
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Checkout)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/capstone-pripeline/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/sololemons/Full-Devops-Project- # timeout=10
+Fetching upstream changes from https://github.com/sololemons/Full-Devops-Project-
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+ > git fetch --tags --force --progress -- https://github.com/sololemons/Full-Devops-Project- +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 6de1d2941a893535f517febfd19be0bdbd9aa47a (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 6de1d2941a893535f517febfd19be0bdbd9aa47a # timeout=10
+Commit message: "Trigger Pipeline"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Connect to EKS)
+[Pipeline] sh
++ aws eks update-kubeconfig --region eu-west-1 --name kijani-staging-cluster
+Updated context arn:aws:eks:eu-west-1:884058772260:cluster/kijani-staging-cluster in /var/jenkins_home/.kube/config
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Deploy to Staging)
+[Pipeline] sh
++ export DOCKER_HUB_PASSWORD=****
++ export DOCKER_HUB_USER=solomondocker10277
++ cd ansible
++ ansible-playbook playbook.yaml -e env=staging
+[WARNING]: No inventory was parsed, only implicit localhost is available
+[WARNING]: provided hosts list is empty, only localhost is available. Note that the implicit localhost does not match 'all'
+
+PLAY [Deploy kk-payments to EKS cluster] ***************************************
+
+TASK [1. Ensure the target environment namespace exists] ***********************
+ok: [localhost]
+
+TASK [2. Automatically generate Docker Hub Registry Credentials] ***************
+ok: [localhost]
+
+TASK [3. Fetch dynamic S3 bucket name from AWS] ********************************
+changed: [localhost]
+
+TASK [4. Apply Native Environment-Specific ConfigMap] **************************
+[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+[DEPRECATION WARNING]: Direct access to the `environment` attribute is deprecated. This feature will be removed from ansible-core version 2.23. Consider using `copy_with_new_env` or passing `overrides` to `template`.
+ok: [localhost]
+
+TASK [5. Apply Shared Application Layout] **************************************
+ok: [localhost] => (item=../k8s/manifests/kk-payments-deployment.yaml)
+ok: [localhost] => (item=../k8s/manifests/kk-payments-service.yaml)
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=5    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Smoke Test Staging)
+[Pipeline] script
+[Pipeline] {
+[Pipeline] echo
+Waiting for the Load Balancer to stabilize...
+[Pipeline] sleep
+Sleeping for 2 min 0 sec
+[Pipeline] sh
++ kubectl get svc kk-payments-service -n kijani-staging -o jsonpath={.status.loadBalancer.ingress[0].hostname}
+[Pipeline] echo
+Running smoke test against: http://a7bbcf1865ab5458fb3c9b4a4106575c-577831173.eu-west-1.elb.amazonaws.com:8067/api/health
+[Pipeline] sh
++ curl -f -s --retry 10 --retry-delay 5 --retry-connrefused http://a7bbcf1865ab5458fb3c9b4a4106575c-577831173.eu-west-1.elb.amazonaws.com:8067/api/health
+{"status":"healthy","message":"Kubernetes probes passing!"}
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Production Approval Gate)
+[Pipeline] input
+Staging Smoke Test Passed! Approve deployment to Production?
+Deploy to Prod or Abort
+Approved by Solomon Ndimu Ngandu
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Deploy to Production)
+[Pipeline] sh
++ export DOCKER_HUB_PASSWORD=****
++ export DOCKER_HUB_USER=solomondocker10277
++ cd ansible
++ ansible-playbook playbook.yaml -e env=production
+[WARNING]: No inventory was parsed, only implicit localhost is available
+[WARNING]: provided hosts list is empty, only localhost is available. Note that the implicit localhost does not match 'all'
+
+PLAY [Deploy kk-payments to EKS cluster] ***************************************
+
+TASK [1. Ensure the target environment namespace exists] ***********************
+changed: [localhost]
+
+TASK [2. Automatically generate Docker Hub Registry Credentials] ***************
+changed: [localhost]
+
+TASK [3. Fetch dynamic S3 bucket name from AWS] ********************************
+changed: [localhost]
+
+TASK [4. Apply Native Environment-Specific ConfigMap] **************************
+[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+[DEPRECATION WARNING]: Direct access to the `environment` attribute is deprecated. This feature will be removed from ansible-core version 2.23. Consider using `copy_with_new_env` or passing `overrides` to `template`.
+changed: [localhost]
+
+TASK [5. Apply Shared Application Layout] **************************************
+changed: [localhost] => (item=../k8s/manifests/kk-payments-deployment.yaml)
+changed: [localhost] => (item=../k8s/manifests/kk-payments-service.yaml)
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=5    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS
