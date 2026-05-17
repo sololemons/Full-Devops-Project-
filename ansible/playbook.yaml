@@ -10,6 +10,8 @@
     docker_password: "{{ lookup('env', 'DOCKER_HUB_PASSWORD') }}"
     docker_email: "{{ lookup('env', 'DOCKER_HUB_EMAIL') }}"
 
+    fetched_bucket_name: "{{ lookup('pipe', 'cd ../terraform && terraform output -raw receipts_bucket_name') }}"
+
   tasks:
     - name: 1. Ensure the target environment namespace exists
       kubernetes.core.k8s:
@@ -36,19 +38,29 @@
         name: prometheus-community
         repo_url: "https://prometheus-community.github.io/helm-charts"
 
-    - name: 4. Install Prometheus Stack via Helm repository
+    - name: 4. Install Prometheus 
       kubernetes.core.helm:
         name: prometheus
         chart_ref: prometheus-community/kube-prometheus-stack
         release_namespace: monitoring
         create_namespace: true
-        wait: true 
+        wait: true
+        timeout: "10m0s"
+        values:
+          grafana:
+            enabled: false
+          alertmanager:
+            enabled: false
+          nodeExporter:
+            enabled: false
+          defaultRules:
+            create: false
 
     - name: 5. Apply Native Environment-Specific ConfigMap
       kubernetes.core.k8s:
         state: present
         namespace: "kijani-{{ env }}"
-        src: "../k8s/manifests/{{ env }}/kk-payments-configmap.yaml" 
+        template: "../k8s/manifests/kk-payments-configmap.yaml.j2"
 
     - name: 6. Apply Shared Application Layout
       kubernetes.core.k8s:

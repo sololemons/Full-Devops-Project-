@@ -12,10 +12,10 @@ const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'us-east-1' 
 });
 
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'your-real-receipt-bucket-name';
+const BUCKET_NAME = process.env.S3_BUCKET_NAME;
 
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'healthy', message: 'Kubernetes probes passing!' });
+    res.status(200).json({ status: 'healthy', message: 'Kubernetes probes passing' });
 });
 
 app.get('/', (req, res) => {

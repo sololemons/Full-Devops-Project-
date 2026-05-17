@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kk-payments-config
+  namespace: "kijani-{{ env }}"
+data:
+  DB_HOST: "{{ env }}-db.kijani.internal"
+  ENVIRONMENT: "{{ env }}"
+  AWS_REGION: "eu-west-1"
+  
+  S3_BUCKET_NAME: "{{ fetched_bucket_name }}"
