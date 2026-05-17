@@ -10,8 +10,6 @@
     docker_password: "{{ lookup('env', 'DOCKER_HUB_PASSWORD') }}"
     docker_email: "{{ lookup('env', 'DOCKER_HUB_EMAIL') }}"
 
-    fetched_bucket_name: "{{ lookup('pipe', 'cd ../terraform && terraform output -raw receipts_bucket_name') }}"
-
   tasks:
     - name: 1. Ensure the target environment namespace exists
       kubernetes.core.k8s:
@@ -33,15 +31,19 @@
           stringData:
             .dockerconfigjson: "{{ { 'auths': { 'https://index.docker.io/v1/': { 'username': docker_user, 'password': docker_password, 'email': docker_email, 'auth': (docker_user + ':' + docker_password) | b64encode } } } | to_json }}"
 
-    
+    - name: 3. Fetch dynamic S3 bucket name from AWS
+      shell: "aws s3 ls | grep receipts-{{ env }} | awk '{print $3}'"
+      register: s3_bucket_lookup
 
-    - name: 3. Apply Native Environment-Specific ConfigMap
+    - name: 4. Apply Native Environment-Specific ConfigMap
       kubernetes.core.k8s:
         state: present
         namespace: "kijani-{{ env }}"
         template: "../k8s/manifests/kk-payments-configmap.yaml.j2"
+      vars:
+        fetched_bucket_name: "{{ s3_bucket_lookup.stdout }}"
 
-    - name: 4. Apply Shared Application Layout
+    - name: 5. Apply Shared Application Layout
       kubernetes.core.k8s:
         state: present
         namespace: "kijani-{{ env }}"
