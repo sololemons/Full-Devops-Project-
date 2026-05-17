@@ -95,14 +95,15 @@ The final running state in the `kijani-<env>` namespace includes a ConfigMap wit
 
 Prometheus is intentionally not installed to keep the cluster lightweight for free-tier usage. Instead, there is a manual monitoring script you can run on demand:
 
-- **Manual SLO checker**: The script in [k8s/manifests/check_slo_errors.sh](k8s/manifests/check_slo_errors.sh) pulls recent logs from the target namespace and calculates an error rate over the last 2 minutes. If the rate is above 5%, it flags an alert.
+- **Manual SLO checker**: The script in [k8s/manifests/check_slo_errors.sh](/monitoring/check_slo_errors.sh) pulls recent logs from the target namespace and calculates an error rate over the last 2 minutes. If the rate is above 5%, it flags an alert.
 - **Jenkins smoke test**: The pipeline resolves the LoadBalancer hostname and runs a `curl` against `/api/health` with retries. This is a synthetic, post-deploy check that verifies the service is reachable and responding before moving on to production.
 - **Kubernetes probes**: The Deployment defines readiness and liveness probes on `/api/health`. If the app stops responding, Kubernetes will remove it from service or restart it.
 - **Docker health check**: The Docker image has a `HEALTHCHECK` that hits the same endpoint inside the container. This is an extra runtime signal if you run the container outside Kubernetes.
 
 Run the script manually like this:
 ```bash
-cd k8s/manifests
+cd monitoring
+chmod +x check_slo_errors.sh 
 ./check_slo_errors.sh staging
 ```
 
@@ -132,7 +133,7 @@ Evidence of the receipt in the S3 bucket in aws
 
 To validate the monitoring logic, an error was intentionally simulated in the app logs. The SLO script detected the spike and produced a report showing the error rate and status. The output is saved in:
 
-- [monitoring_summary_staging.txt](monitoring_summary_staging.txt)
+- [monitoring_summary_staging.txt](/docs/monitoring_summary_staging.txt)
 
 We opted for this option but in production we would definitely go with prometheus alerts.THe disadavantage of prometheus is its heavyweight for a free tier AWS account.
 
