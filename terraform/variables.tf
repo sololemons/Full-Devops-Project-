@@ -32,13 +32,13 @@ variable "node_instance_types" {
     default = ["t3.micro"] 
     }
 variable "node_min_size" { 
-    default = 2
+    default = 3
     }
 variable "node_max_size" {
-     default = 3 
+     default = 4
      }
 variable "node_desired_size" { 
-    default = 2
+    default = 3
     }
 
 variable "namespace" {
